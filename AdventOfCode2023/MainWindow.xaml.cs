@@ -81,7 +81,7 @@ namespace AdventOfCode2023
             yearSelector.ItemsSource = ReflectionHelpers.GetAvailableYears();
             yearSelector.DisplayMemberPath = "Year";
             yearSelector.SelectedValuePath = "Type";
-            yearSelector.SelectedIndex = 0;
+            yearSelector.SelectedIndex = 1;
         }
 
         public void UpdateButtonStates()
