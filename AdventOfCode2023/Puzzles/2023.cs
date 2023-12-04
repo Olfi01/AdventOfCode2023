@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AdventOfCode2023.Puzzles.Classes_2023;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -99,5 +100,83 @@ namespace AdventOfCode2023.Puzzles
         }
 
         #endregion
+
+        public static List<CubeGame> ReadInputDay2(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => new CubeGame(l)).ToList();
+        }
+
+        [Puzzle(day: 2, part: 1)]
+        public static void Day2Part1(string input, Grid display, Label outputLabel)
+        {
+            List<CubeGame> games = ReadInputDay2(input);
+
+            int sum = 0;
+            foreach(CubeGame game in games)
+            {
+                if (game.Draws.All(d => IsDrawPossibleWith(d, red: 12, green: 13, blue: 14))) sum += game.Id;
+            }
+
+            outputLabel.Content = sum;
+        }
+
+        private static bool IsDrawPossibleWith(List<(CubeGame.Color c, int n)> draw, int red, int green, int blue)
+        {
+            return draw.All(e => IsDrawPossibleWith(e, red, green, blue));
+        }
+
+        private static bool IsDrawPossibleWith((CubeGame.Color c, int n) element, int red, int green, int blue)
+        {
+            return element.c switch
+            {
+                CubeGame.Color.Red => element.n <= red,
+                CubeGame.Color.Green => element.n <= green,
+                CubeGame.Color.Blue => element.n <= blue,
+                _ => throw new ArgumentOutOfRangeException(nameof(element))
+            };
+        }
+
+        [Puzzle(day: 2, part: 2)]
+        public static void Day2Part2(string input, Grid display, Label outputLabel)
+        {
+            List<CubeGame> games = ReadInputDay2(input);
+
+            int sum = 0;
+            foreach (CubeGame game in games)
+            {
+                (int minRed, int minGreen, int minBlue) = (0, 0, 0);
+                foreach (var draw in game.Draws)
+                {
+                    (int r, int g, int b) = GetMinCubes(draw);
+                    if (r > minRed) minRed = r;
+                    if (g > minGreen) minGreen = g;
+                    if (b > minBlue) minBlue = b;
+                }
+                sum += minRed * minGreen * minBlue;
+            }
+
+            outputLabel.Content = sum;
+        }
+
+        private static (int r, int g, int b) GetMinCubes(List<(CubeGame.Color c, int n)> draw)
+        {
+            (int r, int g, int b) = (0, 0, 0);
+            foreach (var (c, n) in draw)
+            {
+                switch (c)
+                {
+                    case CubeGame.Color.Red:
+                        r = n;
+                        break;
+                    case CubeGame.Color.Green:
+                        g = n;
+                        break;
+                    case CubeGame.Color.Blue:
+                        b = n;
+                        break;
+                }
+            }
+            return (r, g, b);
+        }
     }
 }
