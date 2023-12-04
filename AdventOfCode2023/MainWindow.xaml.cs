@@ -164,7 +164,7 @@ namespace AdventOfCode2023
         private static async Task<string?> GetExampleString(int year, int day)
         {
             string fileCachePath = Path.Combine(inputCacheFilePath, year.ToString(), $"{day}_example.txt");
-            if (File.Exists(fileCachePath)) return await File.ReadAllTextAsync(fileCachePath);
+            if (File.Exists(fileCachePath)) return (await File.ReadAllTextAsync(fileCachePath)).Replace("\r\n", "\n");
             else return null;
         }
 
@@ -173,7 +173,7 @@ namespace AdventOfCode2023
             if (str == null) return;
             string fileCachePath = Path.Combine(inputCacheFilePath, year.ToString(), $"{day}_example.txt");
             Directory.CreateDirectory(Path.GetDirectoryName(fileCachePath)!);
-            File.WriteAllTextAsync(fileCachePath, str);
+            File.WriteAllTextAsync(fileCachePath, str.Replace("\r\n", "\n"));
         }
 
         private void SetSessionCookie(string sessionCookie)

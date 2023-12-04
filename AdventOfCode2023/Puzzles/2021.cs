@@ -1,11 +1,16 @@
-﻿using AdventOfCode2023.Puzzles.Classes_2021;
+﻿using AdventOfCode2023.Helpers;
+using AdventOfCode2023.Puzzles.Classes_2021;
 using ScottPlot;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Controls;
+using System.Windows.Documents;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace AdventOfCode2023.Puzzles
 {
@@ -100,12 +105,112 @@ namespace AdventOfCode2023.Puzzles
             outputLabel.Content = position * depth;
         }
 
+        private static List<string> ReadInputDay3(string input)
+        {
+            return input.Split('\n').Where(x => !string.IsNullOrEmpty(x)).ToList();
+        }
 
         [Puzzle(day: 3, part: 1)]
         public static void Day3Part1(string input, Grid display, Label outputLabel)
         {
-            
-            outputLabel.Content = null;
+            List<string> lines = ReadInputDay3(input);
+            string gammaRate = "";
+            string epsilonRate = "";
+            for (int i=0; i < lines[0].Length; i++)
+            {
+                gammaRate += lines.Select(l => l[i]).MostCommon();
+                epsilonRate += lines.Select(l => l[i]).LeastCommon();
+            }
+            int gamma = Convert.ToInt32(gammaRate, 2);
+            int epsilon = Convert.ToInt32(epsilonRate, 2);
+
+            outputLabel.Content = gamma * epsilon;
+        }
+
+
+        [Puzzle(day: 3, part: 2)]
+        public static void Day3Part2(string input, Grid display, Label outputLabel)
+        {
+            List<string> lines = ReadInputDay3(input);
+            List<string> linesCopy = new(lines);
+            for (int i=0; i < lines[0].Length; i++)
+            {
+                char mostCommon = lines.Select(l => l[i]).MostCommon(tiebreaker: '1');
+                lines.RemoveAll(line => line[i] != mostCommon);
+                if (lines.Count == 1) break;
+            }
+            for (int i = 0; i < linesCopy[0].Length; i++)
+            {
+                char leastCommon = linesCopy.Select(l => l[i]).LeastCommon(tiebreaker: '0');
+                linesCopy.RemoveAll(line => line[i] != leastCommon);
+                if (linesCopy.Count == 1) break;
+            }
+            int oxygenGeneratorRating = Convert.ToInt32(lines.First(), 2);
+            int co2ScrubberRating = Convert.ToInt32(linesCopy.First(), 2);
+
+            outputLabel.Content = oxygenGeneratorRating * co2ScrubberRating;
+        }
+
+        public static BingoGame ReadInputDay4(string input)
+        {
+            return new BingoGame(input);
+        }
+
+
+        [Puzzle(day: 4, part: 1)]
+        public static void Day4Part1(string input, Grid display, Label outputLabel)
+        {
+            BingoGame game = ReadInputDay4(input);
+
+            BingoBoard? winner = null;
+
+            bool cont = true;
+            int lastDrawn = 0;
+            foreach (int drawn in game.Numbers)
+            {
+                if (!cont) break;
+                lastDrawn = drawn;
+                foreach (BingoBoard board in game.Boards)
+                {
+                    board.Mark(drawn);
+                    if (board.HasBingo())
+                    {
+                        winner = board;
+                        cont = false;
+                        break;
+                    }
+                }
+            }
+
+            if (winner != null) outputLabel.Content = winner.CalculateScore(lastDrawn);
+        }
+
+
+        [Puzzle(day: 4, part: 2)]
+        public static void Day4Part2(string input, Grid display, Label outputLabel)
+        {
+            BingoGame game = ReadInputDay4(input);
+
+            int lastDrawn = 0;
+            BingoBoard? loser = null;
+            foreach (int drawn in game.Numbers)
+            {
+                if (game.Boards.Count < 1) break;
+                lastDrawn = drawn;
+                List<BingoBoard> toDelete = new();
+                foreach (BingoBoard board in game.Boards)
+                {
+                    board.Mark(drawn);
+                    if (board.HasBingo())
+                    {
+                        loser = board;
+                        toDelete.Add(board);
+                    }
+                }
+                foreach(BingoBoard board in toDelete) game.Boards.Remove(board);
+            }
+
+            if (loser != null) outputLabel.Content = loser.CalculateScore(lastDrawn);
         }
     }
 }
