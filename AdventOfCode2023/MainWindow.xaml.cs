@@ -142,7 +142,7 @@ namespace AdventOfCode2023
                 bool? dialogResult = inputBox.ShowDialog();
                 if (dialogResult != true) return null;
                 SaveExampleString(year, day, inputBox.Text);
-                return inputBox.Text;
+                return inputBox.Text.Replace("\r\n", "\n");
             }
             string fileCachePath = Path.Combine(inputCacheFilePath, year.ToString(), $"{day}.txt");
             if (File.Exists(fileCachePath)) return await File.ReadAllTextAsync(fileCachePath);

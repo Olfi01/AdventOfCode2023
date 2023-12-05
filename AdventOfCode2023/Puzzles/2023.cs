@@ -377,5 +377,44 @@ namespace AdventOfCode2023.Puzzles
             outputLabel.Content = sum;
         }
         #endregion
+
+        #region Day 5
+        private static IslandIslandAlmanac ReadInputDay5(string input)
+        {
+            return new IslandIslandAlmanac(input);
+        }
+
+
+        [Puzzle(day: 5, part: 1)]
+        public static void Day5Part1(string input, Grid display, Label outputLabel)
+        {
+            IslandIslandAlmanac almanac = ReadInputDay5(input);
+            long[] locations = almanac.Seeds
+                .Select(s => IslandIslandAlmanac.Convert(s, almanac.SeedToSoil))
+                .Select(s => IslandIslandAlmanac.Convert(s, almanac.SoilToFertilizer))
+                .Select(f => IslandIslandAlmanac.Convert(f, almanac.FertilizerToWater))
+                .Select(w => IslandIslandAlmanac.Convert(w, almanac.WaterToLight))
+                .Select(l => IslandIslandAlmanac.Convert(l, almanac.LightToTemperature))
+                .Select(t => IslandIslandAlmanac.Convert(t, almanac.TemperatureToHumidity))
+                .Select(h => IslandIslandAlmanac.Convert(h, almanac.HumidityToLocation))
+                .ToArray();
+            outputLabel.Content = locations.Min();
+        }
+
+
+        [Puzzle(day: 5, part: 2)]
+        public static void Day5Part2(string input, Grid display, Label outputLabel)
+        {
+            IslandIslandAlmanac almanac = ReadInputDay5(input);
+            var locations = IslandIslandAlmanac.Convert(almanac.SeedRanges, almanac.SeedToSoil);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.SoilToFertilizer);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.FertilizerToWater);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.WaterToLight);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.LightToTemperature);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.TemperatureToHumidity);
+            locations = IslandIslandAlmanac.Convert(locations, almanac.HumidityToLocation);
+            outputLabel.Content = locations.MinBy(r => r.start).start;
+        }
+        #endregion
     }
 }
