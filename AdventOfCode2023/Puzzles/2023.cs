@@ -1,12 +1,15 @@
 ﻿using AdventOfCode2023.Puzzles.Classes_2023;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace AdventOfCode2023.Puzzles
 {
@@ -414,6 +417,68 @@ namespace AdventOfCode2023.Puzzles
             locations = IslandIslandAlmanac.Convert(locations, almanac.TemperatureToHumidity);
             locations = IslandIslandAlmanac.Convert(locations, almanac.HumidityToLocation);
             outputLabel.Content = locations.MinBy(r => r.start).start;
+        }
+        #endregion
+
+        #region Day 6
+        private static BoatRace[] ReadInputDay6(string input)
+        {
+            return BoatRace.ReadRaces(input);
+        }
+
+
+        [Puzzle(day: 6, part: 1)]
+        public static void Day6Part1(string input, Grid display, Label outputLabel)
+        {
+            BoatRace[] races = ReadInputDay6(input);
+            int product = 1;
+            foreach (var race in races)
+            {
+                int options = 0;
+                for (int t = 1; t < race.Time; t++)
+                {
+                    if (t * (race.Time - t) > race.Distance) options++;
+                    else if (options > 0) break;
+                }
+                product *= options;
+            }
+            outputLabel.Content = product;
+        }
+
+        private static BoatRace ReadInputDay6ButRight(string input)
+        {
+            return BoatRace.ReadRace(input);
+        }
+
+
+        [Puzzle(day: 6, part: 2)]
+        public static void Day6Part2(string input, Grid display, Label outputLabel)
+        {
+            BoatRace race = ReadInputDay6ButRight(input);
+            ConcurrentBag<int> options = new();
+            int calculated = 0;
+            ProgressBar progress = new() { Minimum = 0, Maximum = race.Time - 1, MaxWidth = 200, MaxHeight = 40 };
+            display.Children.Add(progress);
+            var dispatcherTimer = new DispatcherTimer(DispatcherPriority.Normal, progress.Dispatcher);
+            dispatcherTimer.Tick += (sender, e) =>
+            {
+                progress.Value = calculated;
+            };
+            dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
+            dispatcherTimer.Start();
+            var task = Task.Run(() =>
+            {
+                Parallel.ForEach(Enumerable.Range(1, race.Time), t =>
+                {
+                    if ((long)t * (race.Time - t) > race.Distance) options.Add(t);
+                    Interlocked.Increment(ref calculated);
+                });
+            }).ContinueWith(task => 
+            { 
+                outputLabel.Dispatcher.Invoke(() => outputLabel.Content = options.Count);
+                dispatcherTimer.Stop();
+                progress.Dispatcher.Invoke(() => progress.Value = calculated);
+            });
         }
         #endregion
     }
