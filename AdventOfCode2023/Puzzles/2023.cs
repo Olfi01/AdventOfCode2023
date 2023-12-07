@@ -481,5 +481,40 @@ namespace AdventOfCode2023.Puzzles
             });
         }
         #endregion
+
+        #region Day 7
+        private static CamelCardsHand[] ReadInputDay7(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => new CamelCardsHand(l)).ToArray();
+        }
+
+
+        [Puzzle(day: 7, part: 1)]
+        public static void Day7Part1(string input, Grid display, Label outputLabel)
+        {
+            CamelCardsHand[] hands = ReadInputDay7(input);
+            hands = hands.OrderBy(hand => hand.Type).ThenBy(hand => hand.Cards[0].Value).ThenBy(hand => hand.Cards[1].Value).ThenBy(hand => hand.Cards[2].Value).ThenBy(hand => hand.Cards[3].Value).ThenBy(hand => hand.Cards[4].Value).ToArray();
+            for (int i = 0; i < hands.Length; i++)
+            {
+                hands[i].Rank = i + 1;
+            }
+            int winnings = hands.Sum(hand => hand.Rank * hand.Bid);
+            outputLabel.Content = winnings;
+        }
+
+
+        [Puzzle(day: 7, part: 2)]
+        public static void Day7Part2(string input, Grid display, Label outputLabel)
+        {
+            CamelCardsHand[] hands = ReadInputDay7(input);
+            hands = hands.OrderBy(hand => hand.Type2).ThenBy(hand => hand.Cards[0].Value2).ThenBy(hand => hand.Cards[1].Value2).ThenBy(hand => hand.Cards[2].Value2).ThenBy(hand => hand.Cards[3].Value2).ThenBy(hand => hand.Cards[4].Value2).ToArray();
+            for (int i = 0; i < hands.Length; i++)
+            {
+                hands[i].Rank = i + 1;
+            }
+            int winnings = hands.Sum(hand => hand.Rank * hand.Bid);
+            outputLabel.Content = winnings;
+        }
+        #endregion
     }
 }
