@@ -516,5 +516,116 @@ namespace AdventOfCode2023.Puzzles
             outputLabel.Content = winnings;
         }
         #endregion
+
+        #region Day 8
+        private static DesertMap ReadInputDay8(string input)
+        {
+            return new DesertMap(input);
+        }
+
+
+        [Puzzle(day: 8, part: 1)]
+        public static void Day8Part1(string input, Grid display, Label outputLabel)
+        {
+            DesertMap map = ReadInputDay8(input);
+            string currentNode = "AAA";
+            string goal = "ZZZ";
+            int steps = 0;
+            while (currentNode != goal)
+            {
+                for (int i = 0; i < map.Instructions.Length; i++)
+                {
+                    steps++;
+                    switch (map.Instructions[i])
+                    {
+                        case 'L':
+                            currentNode = map.Nodes[currentNode].Left;
+                            break;
+                        case 'R':
+                            currentNode = map.Nodes[currentNode].Right;
+                            break;
+                    }
+                    if (currentNode == goal) break;
+                }
+            }
+            outputLabel.Content = steps;
+        }
+
+
+        [Puzzle(day: 8, part: 2)]
+        public static void Day8Part2(string input, Grid display, Label outputLabel)
+        {
+            DesertMap map = ReadInputDay8(input);
+            string[] currentNodes = map.Nodes.Where(node => node.Key.EndsWith('A')).Select(node => node.Key).ToArray();
+            int[] firstGoals = new int[currentNodes.Length];
+            int[] goalLoopSteps = new int[currentNodes.Length];
+            for (int i = 0; i < currentNodes.Length; i++)
+            {
+                string currentNode = currentNodes[i];
+                string startNode = currentNode;
+                List<(int step, int instructionStep, string node)> path = new()
+                {
+                    (0, 0, currentNode)
+                };
+                int steps = 0;
+                do
+                {
+                    for (int j = 0; j < map.Instructions.Length; j++)
+                    {
+                        steps++;
+                        switch (map.Instructions[j])
+                        {
+                            case 'L':
+                                currentNode = map.Nodes[currentNode].Left;
+                                break;
+                            case 'R':
+                                currentNode = map.Nodes[currentNode].Right;
+                                break;
+                        }
+                        path.Add((steps, j + 1, currentNode));
+                        if (path.SkipLast(1).Any(x => x.instructionStep == path.Last().instructionStep && x.node == path.Last().node)) break;
+                    }
+                } while (!path.SkipLast(1).Any(x => x.instructionStep == path.Last().instructionStep && x.node == path.Last().node));
+                int count = path.SkipWhile(x => x.instructionStep != path.Last().instructionStep || x.node != path.Last().node).Count(x => x.node.EndsWith('Z'));
+                firstGoals[i] = path.First(x => x.node.EndsWith('Z')).step;
+                goalLoopSteps[i] = path.SkipWhile(x => x.instructionStep != path.Last().instructionStep || x.node != path.Last().node).Skip(1).Count();
+            }
+            int[] stepses = new int[currentNodes.Length];
+            for (int i = 0; i < stepses.Length; i++)
+            {
+                stepses[i] = firstGoals[i];
+            }
+            while (stepses.GroupBy(i => i).Count() > 1)
+            {
+                for (int i = 0; i < stepses.Length; i++)
+                {
+                    if (stepses[i] == stepses.Min())
+                    {
+                        stepses[i] = stepses[i] + goalLoopSteps[i];
+                        break;
+                    }
+                }
+            }
+            outputLabel.Content = Lcm(goalLoopSteps.Select(i => (long)i).ToArray());
+        }
+
+        // *proudly* I stole it!
+        private static long Gcd(long n1, long n2)
+        {
+            if (n2 == 0)
+            {
+                return n1;
+            }
+            else
+            {
+                return Gcd(n2, n1 % n2);
+            }
+        }
+
+        private static long Lcm(long[] numbers)
+        {
+            return numbers.Aggregate((S, val) => S * val / Gcd(S, val));
+        }
+        #endregion
     }
 }
