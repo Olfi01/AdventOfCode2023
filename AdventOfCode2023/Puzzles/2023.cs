@@ -3,6 +3,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -590,11 +591,13 @@ namespace AdventOfCode2023.Puzzles
                 firstGoals[i] = path.First(x => x.node.EndsWith('Z')).step;
                 goalLoopSteps[i] = path.SkipWhile(x => x.instructionStep != path.Last().instructionStep || x.node != path.Last().node).Skip(1).Count();
             }
+            /* If firstGoals and goalLoopSteps weren't completely equal, I couldn't think of any other way than this
             int[] stepses = new int[currentNodes.Length];
             for (int i = 0; i < stepses.Length; i++)
             {
                 stepses[i] = firstGoals[i];
             }
+            
             while (stepses.GroupBy(i => i).Count() > 1)
             {
                 for (int i = 0; i < stepses.Length; i++)
@@ -605,8 +608,19 @@ namespace AdventOfCode2023.Puzzles
                         break;
                     }
                 }
+            }*/
+            outputLabel.Content = Lcm(goalLoopSteps.Select(i => (long)i).ToArray()); // this only works because firstGoals is completely equal to goalLoopSteps
+        }
+
+        private static async IAsyncEnumerable<long> GetStepses(long start, long interval, [EnumeratorCancellation] CancellationToken ct)
+        {
+            await Task.CompletedTask;
+            long num = start;
+            while (!ct.IsCancellationRequested)
+            {
+                yield return num;
+                num += interval;
             }
-            outputLabel.Content = Lcm(goalLoopSteps.Select(i => (long)i).ToArray());
         }
 
         // *proudly* I stole it!
