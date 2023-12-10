@@ -1,7 +1,9 @@
-﻿using AdventOfCode2023.Puzzles.Classes_2023;
+﻿using AdventOfCode2023.Helpers;
+using AdventOfCode2023.Puzzles.Classes_2023;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -11,6 +13,7 @@ using System.Windows.Controls;
 using System.Windows.Documents;
 using System.Windows.Media;
 using System.Windows.Threading;
+using Brushes = System.Windows.Media.Brushes;
 
 namespace AdventOfCode2023.Puzzles
 {
@@ -52,7 +55,7 @@ namespace AdventOfCode2023.Puzzles
             int sum = 0;
             TextBlock textBlock = new();
             display.Children.Add(textBlock);
-            
+
             foreach (string line in lines)
             {
                 int lowestNum = -1;
@@ -75,7 +78,8 @@ namespace AdventOfCode2023.Puzzles
                         lowestIdx = line.IndexOf(numberWords[i]);
                         lowestLength = numberWords[i].Length;
                     }
-                    if (line.LastIndexOf(numbers[i]) > highestIdx) {
+                    if (line.LastIndexOf(numbers[i]) > highestIdx)
+                    {
                         highestNum = i;
                         highestIdx = line.LastIndexOf(numbers[i]);
                         highestLength = 1;
@@ -121,7 +125,7 @@ namespace AdventOfCode2023.Puzzles
             List<CubeGame> games = ReadInputDay2(input);
 
             int sum = 0;
-            foreach(CubeGame game in games)
+            foreach (CubeGame game in games)
             {
                 if (game.Draws.All(d => IsDrawPossibleWith(d, red: 12, green: 13, blue: 14))) sum += game.Id;
             }
@@ -474,8 +478,8 @@ namespace AdventOfCode2023.Puzzles
                     if ((long)t * (race.Time - t) > race.Distance) options.Add(t);
                     Interlocked.Increment(ref calculated);
                 });
-            }).ContinueWith(task => 
-            { 
+            }).ContinueWith(task =>
+            {
                 outputLabel.Dispatcher.Invoke(() => outputLabel.Content = options.Count);
                 dispatcherTimer.Stop();
                 progress.Dispatcher.Invoke(() => progress.Value = calculated);
@@ -639,6 +643,182 @@ namespace AdventOfCode2023.Puzzles
         private static long Lcm(long[] numbers)
         {
             return numbers.Aggregate((S, val) => S * val / Gcd(S, val));
+        }
+        #endregion
+
+        #region Day 9
+        private static List<int[]> ReadInputDay9(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => l.Split(" ").Select(i => int.Parse(i)).ToArray()).ToList();
+        }
+
+        [Puzzle(day: 9, part: 1)]
+        public static void Day9Part1(string input, Grid display, Label outputLabel)
+        {
+            List<int[]> sequences = ReadInputDay9(input);
+            int sum = 0;
+            foreach (int[] sequence in sequences)
+            {
+                Stack<int[]> derivations = new();
+                int[] deriv = new int[sequence.Length - 1];
+                for (int i = 0; i < sequence.Length - 1; i++)
+                {
+                    deriv[i] = sequence[i + 1] - sequence[i];
+                }
+                derivations.Push(deriv);
+                while (derivations.Peek().Any(i => i != 0))
+                {
+                    int[] before = derivations.Peek();
+                    int[] d = new int[before.Length - 1];
+                    for (int i = 0; i < before.Length - 1; i++)
+                    {
+                        d[i] = before[i + 1] - before[i];
+                    }
+                    derivations.Push(d);
+                }
+                int last = 0;
+                while (derivations.TryPop(out int[]? pop))
+                {
+                    last += pop!.Last();
+                }
+                last += sequence.Last();
+                sum += last;
+            }
+            outputLabel.Content = sum;
+        }
+
+        [Puzzle(day: 9, part: 2)]
+        public static void Day9Part2(string input, Grid display, Label outputLabel)
+        {
+            List<int[]> sequences = ReadInputDay9(input);
+            int sum = 0;
+            foreach (int[] sequence in sequences)
+            {
+                Stack<int[]> derivations = new();
+                int[] deriv = new int[sequence.Length - 1];
+                for (int i = 0; i < sequence.Length - 1; i++)
+                {
+                    deriv[i] = sequence[i + 1] - sequence[i];
+                }
+                derivations.Push(deriv);
+                while (derivations.Peek().Any(i => i != 0))
+                {
+                    int[] before = derivations.Peek();
+                    int[] d = new int[before.Length - 1];
+                    for (int i = 0; i < before.Length - 1; i++)
+                    {
+                        d[i] = before[i + 1] - before[i];
+                    }
+                    derivations.Push(d);
+                }
+                int first = 0;
+                derivations.Pop();
+                while (derivations.TryPop(out int[]? pop))
+                {
+                    first = pop!.First() - first;
+                }
+                first = sequence.First() - first;
+                sum += first;
+            }
+            outputLabel.Content = sum;
+        }
+        #endregion
+
+        #region Day 10
+        private static PipeMap ReadInputDay10(string input)
+        {
+            return new PipeMap(input);
+        }
+
+
+        [Puzzle(day: 10, part: 1)]
+        public static void Day10Part1(string input, Grid display, Label outputLabel)
+        {
+            PipeMap map = ReadInputDay10(input);
+            int pathLength = map.FindLoopLength();
+            outputLabel.Content = pathLength / 2;
+        }
+
+
+        [Puzzle(day: 10, part: 2)]
+        public static void Day10Part2(string input, Grid display, Label outputLabel)
+        {
+            PipeMap map = ReadInputDay10(input);
+            List<(int row, int col)> loop = map.FindLoop();
+            PipeMap.TileType[,] loopMap = CreatePipeLoopMap(map.Map, loop);
+            int maxCol = loopMap.GetLength(1) - 1;
+            for (int row = 0; row < loopMap.GetLength(0); row++)
+            {
+                if (loopMap[row, 0] != PipeMap.TileType.Pipe) loopMap[row, 0] = PipeMap.TileType.Outer;
+                if (loopMap[row, maxCol] != PipeMap.TileType.Pipe) loopMap[row, maxCol] = PipeMap.TileType.Outer;
+            }
+            int maxRow = loopMap.GetLength(0) - 1;
+            for (int col = 0; col < loopMap.GetLength(1); col++)
+            {
+                if (loopMap[0, col] != PipeMap.TileType.Pipe) loopMap[0, col] = PipeMap.TileType.Outer;
+                if (loopMap[maxRow, col] != PipeMap.TileType.Pipe) loopMap[maxRow, col] = PipeMap.TileType.Outer;
+            }
+            for (int row = 0; row < loopMap.GetLength(0); row++)
+            {
+                if (loopMap[row, 0] == PipeMap.TileType.Outer) FloodOuters(row, 0, loopMap, maxRow, maxCol);
+                if (loopMap[row, maxCol] == PipeMap.TileType.Outer) FloodOuters(row, maxCol, loopMap, maxRow, maxCol);
+            }
+            for (int col = 0; col < loopMap.GetLength(1); col++)
+            {
+                if (loopMap[0, col] == PipeMap.TileType.Outer) FloodOuters(0, col, loopMap, maxRow, maxCol);
+                if (loopMap[maxRow, col] == PipeMap.TileType.Outer) FloodOuters(maxRow, col, loopMap, maxRow, maxCol);
+            }
+            int enclosed = 0;
+            TextBlock debug = new() { FontFamily = new("Cascadia Code") };
+            display.Children.Add(debug);
+            for (int row = 0; row < loopMap.GetLength(0); row += 2)
+            {
+                for (int col = 0; col < loopMap.GetLength(1); col += 2)
+                {
+                    if (loopMap[row, col] == PipeMap.TileType.Undecided) enclosed++;
+                    debug.Inlines.Add(new Run(map.GetPipeChar(row / 2, col / 2)) { Foreground = loopMap[row, col].GetColor() });
+                }
+                debug.Inlines.Add(new Run("\n"));
+            }
+            outputLabel.Content = enclosed;
+        }
+
+        private static void FloodOuters(int row, int col, PipeMap.TileType[,] loopMap, int maxRow, int maxCol)
+        {
+            for (int dR = -1; dR < 2; dR++)
+            {
+                for (int dC = -1; dC < 2; dC++)
+                {
+                    if (row + dR > maxRow || col + dC > maxCol
+                        || row + dR < 0 || col + dC < 0) continue;
+                    if (loopMap[row + dR, col + dC] == PipeMap.TileType.Undecided)
+                    {
+                        loopMap[row + dR, col + dC] = PipeMap.TileType.Outer;
+                        FloodOuters(row + dR, col + dC, loopMap, maxRow, maxCol);
+                    }
+                }
+            }
+        }
+
+        private static PipeMap.TileType[,] CreatePipeLoopMap(PipeMap.Pipe[,] map, List<(int row, int col)> loop)
+        {
+            PipeMap.TileType[,] outMap = new PipeMap.TileType[map.GetLength(0) * 2 - 1, map.GetLength(1) * 2 - 1];
+            foreach ((int row, int col) in loop)
+            {
+                outMap[row * 2, col * 2] = PipeMap.TileType.Pipe;
+            }
+            for (int row = 0; row < map.GetLength(0); row++)
+            {
+                for (int col = 0; col < map.GetLength(1); col++)
+                {
+                    PipeMap.Pipe pipe = map[row, col];
+                    if (pipe.ConnectsNorth && row > 0) outMap[row * 2 - 1, col * 2] = PipeMap.TileType.Pipe;
+                    if (pipe.ConnectsSouth && row * 2 < outMap.GetLength(0) - 1) outMap[row * 2 + 1, col * 2] = PipeMap.TileType.Pipe;
+                    if (pipe.ConnectsEast && col * 2 < outMap.GetLength(1) - 1) outMap[row * 2, col * 2 + 1] = PipeMap.TileType.Pipe;
+                    if (pipe.ConnectsWest && col > 0) outMap[row * 2, col * 2 - 1] = PipeMap.TileType.Pipe;
+                }
+            }
+            return outMap;
         }
         #endregion
     }
