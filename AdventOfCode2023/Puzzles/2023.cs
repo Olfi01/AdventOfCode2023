@@ -821,5 +821,123 @@ namespace AdventOfCode2023.Puzzles
             return outMap;
         }
         #endregion
+
+        #region Day 11
+        private static List<Galaxy> ReadInputDay11(string input)
+        {
+            List<Galaxy> list = new();
+            string[] lines = input.Split('\n').Where(s => !string.IsNullOrEmpty(s)).ToArray();
+            int rows = lines.Length;
+            int cols = lines[0].Length;
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int col = 0; col < line.Length; col++)
+                {
+                    char c = line[col];
+                    if (c == '#') list.Add(new(row, col));
+                }
+            }
+            for (int row = 0; row < rows; row++)
+            {
+                if (!list.Any(g => g.Row == row))
+                {
+                    foreach (var g in list.Where(g => g.Row > row))
+                    {
+                        g.Row++;
+                    }
+                    row++;
+                    rows++;
+                }
+            }
+            for (int col = 0; col < cols; col++)
+            {
+                if (!list.Any(g => g.Column == col))
+                {
+                    foreach (var g in list.Where(g => g.Column > col))
+                    {
+                        g.Column++;
+                    }
+                    col++;
+                    cols++;
+                }
+            }
+            return list;
+        }
+
+
+        [Puzzle(day: 11, part: 1)]
+        public static void Day11Part1(string input, Grid display, Label outputLabel)
+        {
+            List<Galaxy> galaxies = ReadInputDay11(input);
+            long sum = 0;
+            for (int i = 0; i < galaxies.Count; i++)
+            {
+                for (int j = i + 1; j < galaxies.Count; j++)
+                {
+                    sum += Math.Abs(galaxies[i].Column - galaxies[j].Column) + Math.Abs(galaxies[i].Row - galaxies[j].Row);
+                }
+            }
+            outputLabel.Content = sum;
+        }
+
+        private static List<Galaxy> ReadInputDay11Part2(string input)
+        {
+            List<Galaxy> list = new();
+            string[] lines = input.Split('\n').Where(s => !string.IsNullOrEmpty(s)).ToArray();
+            int rows = lines.Length;
+            int cols = lines[0].Length;
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int col = 0; col < line.Length; col++)
+                {
+                    char c = line[col];
+                    if (c == '#') list.Add(new(row, col));
+                }
+            }
+            for (long row = 0; row < rows; row++)
+            {
+                if (!list.Any(g => g.Row == row))
+                {
+                    foreach (var g in list.Where(g => g.Row > row))
+                    {
+                        g.Row+=999999;
+                    }
+                    row+=999999;
+                    rows+=999999;
+                }
+            }
+            for (long col = 0; col < cols; col++)
+            {
+                if (!list.Any(g => g.Column == col))
+                {
+                    foreach (var g in list.Where(g => g.Column > col))
+                    {
+                        g.Column+=999999;
+                    }
+                    col+=999999;
+                    cols+=999999;
+                }
+            }
+            return list;
+        }
+
+
+        [Puzzle(day: 11, part: 2)]
+        public static void Day11Part2(string input, Grid display, Label outputLabel)
+        {
+            List<Galaxy> galaxies = ReadInputDay11Part2(input);
+            long sum = 0;
+            for (int i = 0; i < galaxies.Count; i++)
+            {
+                for (int j = i + 1; j < galaxies.Count; j++)
+                {
+                    sum += Math.Abs(galaxies[i].Column - galaxies[j].Column) + Math.Abs(galaxies[i].Row - galaxies[j].Row);
+                }
+            }
+            outputLabel.Content = sum;
+        }
+        #endregion
     }
 }
