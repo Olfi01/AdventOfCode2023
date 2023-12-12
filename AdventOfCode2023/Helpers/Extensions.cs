@@ -35,5 +35,16 @@ namespace AdventOfCode2023.Helpers
                 _ => throw new NotImplementedException(),
             };
         }
+
+        public static string AsChar(this SpringCondition condition)
+        {
+            return condition switch
+            {
+                SpringCondition.Unknown => "?",
+                SpringCondition.Operational => ".",
+                SpringCondition.Damaged => "#",
+                _ => "!"
+            };
+        }
     }
 }

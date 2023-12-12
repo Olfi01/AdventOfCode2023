@@ -3,6 +3,7 @@ using AdventOfCode2023.Puzzles.Classes_2023;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -902,10 +903,10 @@ namespace AdventOfCode2023.Puzzles
                 {
                     foreach (var g in list.Where(g => g.Row > row))
                     {
-                        g.Row+=999999;
+                        g.Row += 999999;
                     }
-                    row+=999999;
-                    rows+=999999;
+                    row += 999999;
+                    rows += 999999;
                 }
             }
             for (long col = 0; col < cols; col++)
@@ -914,10 +915,10 @@ namespace AdventOfCode2023.Puzzles
                 {
                     foreach (var g in list.Where(g => g.Column > col))
                     {
-                        g.Column+=999999;
+                        g.Column += 999999;
                     }
-                    col+=999999;
-                    cols+=999999;
+                    col += 999999;
+                    cols += 999999;
                 }
             }
             return list;
@@ -937,6 +938,225 @@ namespace AdventOfCode2023.Puzzles
                 }
             }
             outputLabel.Content = sum;
+        }
+        #endregion
+
+        #region Day 12
+        private static SpringRecord[] ReadInputDay12(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => new SpringRecord(l)).ToArray();
+        }
+
+
+        [Puzzle(day: 12, part: 1)]
+        public static void Day12Part1(string input, Grid display, Label outputLabel)
+        {
+            SpringRecord[] records = ReadInputDay12(input);
+            int possibleArrangements = 0;
+            foreach (SpringRecord record in records)
+            {
+                FindPossibleArrangements(record, unknowns: new List<SpringCondition>(), ref possibleArrangements);
+            }
+            outputLabel.Content = possibleArrangements;
+        }
+
+        private static void FindPossibleArrangements(SpringRecord record, List<SpringCondition> unknowns, ref int possibleArrangements)
+        {
+            if (record.Conditions.Count(c => c == SpringCondition.Unknown) == unknowns.Count)
+            {
+                // check if it matches other format, and if yes, increment posssibleArrangements
+                int unknownsIdx = 0;
+                List<int> groups = new();
+                bool lastWasDamaged = false;
+                foreach (SpringCondition condition in record.Conditions)
+                {
+                    SpringCondition c = condition;
+                    if (c == SpringCondition.Unknown)
+                    {
+                        c = unknowns[unknownsIdx++];
+                    }
+
+                    if (c == SpringCondition.Damaged)
+                    {
+                        if (lastWasDamaged)
+                        {
+                            groups[^1]++;
+                        }
+                        else
+                        {
+                            groups.Add(1);
+                            lastWasDamaged = true;
+                        }
+                    }
+                    else if (c == SpringCondition.Operational)
+                    {
+                        lastWasDamaged = false;
+                    }
+                }
+                if (groups.SequenceEqual(record.DamagedSpringGroups)) possibleArrangements++;
+            }
+            else
+            {
+                if (CouldNextBeDamaged(record, unknowns))
+                {
+                    unknowns.Add(SpringCondition.Damaged);
+                    FindPossibleArrangements(record, unknowns, ref possibleArrangements);
+                    unknowns.RemoveAt(unknowns.Count - 1);
+                }
+                if (CouldNextBeOperational(record, unknowns))
+                {
+                    unknowns.Add(SpringCondition.Operational);
+                    FindPossibleArrangements(record, unknowns, ref possibleArrangements);
+                    unknowns.RemoveAt(unknowns.Count - 1);
+                }
+            }
+        }
+
+        private static bool CouldNextBeDamaged(SpringRecord record, List<SpringCondition> unknowns)
+        {
+            int unknownsIdx = 0;
+            List<int> groups = new();
+            bool lastWasDamaged = false;
+            for (int i = 0; i < record.Conditions.Length; i++)
+            {
+                SpringCondition c = record.Conditions[i];
+                if (c == SpringCondition.Unknown)
+                {
+                    if (unknowns.Count > unknownsIdx)
+                    {
+                        c = unknowns[unknownsIdx++];
+                    }
+                    else
+                    {
+                        if (lastWasDamaged)
+                        {
+                            return record.DamagedSpringGroups.Length >= groups.Count
+                                && groups.SkipLast(1).SequenceEqual(record.DamagedSpringGroups.Take(groups.Count - 1))
+                                && groups[^1] + record.Conditions.Skip(i + 1).TakeWhile(c => c == SpringCondition.Damaged).Count() + 1 <= record.DamagedSpringGroups[groups.Count - 1]
+                                && groups[^1] + record.Conditions.Skip(i + 1).TakeWhile(c => c != SpringCondition.Operational).Count() + 1 >= record.DamagedSpringGroups[groups.Count - 1];
+                        }
+                        else
+                        {
+                            return record.DamagedSpringGroups.Length > groups.Count
+                                && groups.SequenceEqual(record.DamagedSpringGroups.Take(groups.Count))
+                                && record.Conditions.Skip(i + 1).TakeWhile(c => c == SpringCondition.Damaged).Count() + 1 <= record.DamagedSpringGroups[groups.Count]
+                                && record.Conditions.Skip(i + 1).TakeWhile(c => c != SpringCondition.Operational).Count() + 1 >= record.DamagedSpringGroups[groups.Count];
+                        }
+                    }
+                }
+
+                if (c == SpringCondition.Damaged)
+                {
+                    if (lastWasDamaged)
+                    {
+                        groups[^1]++;
+                    }
+                    else
+                    {
+                        groups.Add(1);
+                        lastWasDamaged = true;
+                    }
+                }
+                else if (c == SpringCondition.Operational)
+                {
+                    lastWasDamaged = false;
+                }
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        private static bool CouldNextBeOperational(SpringRecord record, List<SpringCondition> unknowns)
+        {
+            int unknownsIdx = 0;
+            List<int> groups = new();
+            bool lastWasDamaged = false;
+            for (int i = 0; i < record.Conditions.Length; i++)
+            {
+                SpringCondition c = record.Conditions[i];
+                if (c == SpringCondition.Unknown)
+                {
+                    if (unknowns.Count > unknownsIdx)
+                    {
+                        c = unknowns[unknownsIdx++];
+                    }
+                    else
+                    {
+                        return groups.SequenceEqual(record.DamagedSpringGroups.Take(groups.Count))
+                            && record.Conditions.Skip(i).Count(c => c != SpringCondition.Operational) >= record.DamagedSpringGroups.Skip(groups.Count).Sum();
+                    }
+                }
+
+                if (c == SpringCondition.Damaged)
+                {
+                    if (lastWasDamaged)
+                    {
+                        groups[^1]++;
+                    }
+                    else
+                    {
+                        groups.Add(1);
+                        lastWasDamaged = true;
+                    }
+                }
+                else if (c == SpringCondition.Operational)
+                {
+                    lastWasDamaged = false;
+                }
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        private static (string springs, int[] damaged)[] ReadInputDay12Part2(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x))
+                .Select(l => SpringRecord.UnfoldLine(l))
+                .Select(l => SpringRecord.OptimizeLine(l))
+                .Select(l =>
+            {
+                string[] split = l.Split(" ");
+                return (split[0], split[1].Split(',').Select(i => int.Parse(i)).ToArray());
+            }).ToArray();
+        }
+
+        [Puzzle(day: 12, part: 2)]
+        public static void Day12Part2(string input, Grid display, Label outputLabel)
+        {
+            (string springs, int[] damaged)[] records = ReadInputDay12Part2(input);
+            long possibleArrangements = 0;
+            var cache = new Dictionary<string, Dictionary<int[], long>>();
+            foreach (var (springs, damaged) in records)
+            {
+                long count = FindPossibleArrangements(springs, damaged, cache);
+                possibleArrangements += count;
+            }
+            outputLabel.Content = possibleArrangements;
+        }
+
+        private static long FindPossibleArrangements(string springs, int[] damaged, Dictionary<string, Dictionary<int[], long>> cache)
+        {
+            long count = 0;
+            if (damaged.Length == 0) return springs.Contains('#') ? 0 : 1;
+            if (!springs.Contains('#') && !springs.Contains('?')) return 0;
+
+            int maxIndex = Math.Min(springs.Contains('#') ? springs.IndexOf('#') : springs.Length - 1, springs.Length - damaged.Sum() - 1);
+
+            for (int i = 1; i <= maxIndex; i++)
+            {
+                string part = springs[i..];
+                if (part[..damaged[0]].Contains('.'))
+                    continue;
+
+                string newSprings = part[damaged[0]..];
+                int[] newDamaged = damaged.Skip(1).ToArray();
+                if (!cache.ContainsKey(newSprings)) cache.Add(newSprings, new Dictionary<int[], long>(new SpringRecord.IntArrayEqualityComparer()));
+                if (!cache[newSprings].ContainsKey(newDamaged))
+                {
+                    cache[newSprings].Add(newDamaged, FindPossibleArrangements(newSprings, newDamaged, cache));
+                }
+                count += cache[newSprings][newDamaged];
+            }
+
+            return count;
         }
         #endregion
     }
