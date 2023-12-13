@@ -46,5 +46,30 @@ namespace AdventOfCode2023.Helpers
                 _ => "!"
             };
         }
+
+        public static List<T[]> GetRows<T>(this T[,] array)
+        {
+            return Enumerable.Range(0, array.GetLength(0)).Select(row => Enumerable.Range(0, array.GetLength(1)).Select(x => array[row, x]).ToArray()).ToList();
+        }
+
+        public static List<T[]> GetColumns<T>(this T[,] array)
+        {
+            return Enumerable.Range(0, array.GetLength(1)).Select(col => Enumerable.Range(0, array.GetLength(0)).Select(x => array[x, col]).ToArray()).ToList();
+        }
+
+        public static bool SequenceEqualExceptOne<T>(this IEnumerable<T> enumerable, IEnumerable<T> other)
+        {
+            if (enumerable.Count() != other.Count()) return false;
+            bool oneWasDifferent = false;
+            for (int i = 0; i < enumerable.Count(); i++)
+            {
+                if (!enumerable.ElementAt(i)!.Equals(other.ElementAt(i)))
+                {
+                    if (oneWasDifferent) return false;
+                    oneWasDifferent = true;
+                }
+            }
+            return oneWasDifferent;
+        }
     }
 }

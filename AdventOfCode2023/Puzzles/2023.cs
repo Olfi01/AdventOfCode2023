@@ -1159,5 +1159,154 @@ namespace AdventOfCode2023.Puzzles
             return count;
         }
         #endregion
+
+        #region Day 13
+        private static List<char[,]> ReadInputDay13(string input)
+        {
+            string[] split = input.Split("\n\n");
+            List<char[,]> output = new();
+            foreach (string s in split)
+            {
+                string[] lines = s.Split("\n").Where(x => !string.IsNullOrEmpty(x)).ToArray();
+                char[,] pattern = new char[lines.Length, lines[0].Length];
+                for (int row = 0; row < lines.Length; row++)
+                {
+                    string line = lines[row];
+                    for (int col = 0; col < line.Length; col++)
+                    {
+                        pattern[row, col] = line[col];
+                    }
+                }
+                output.Add(pattern);
+            }
+            return output;
+        }
+
+        [Puzzle(day: 13, part: 1)]
+        public static void Day13Part1(string input, Grid display, Label outputLabel)
+        {
+            List<char[,]> patterns = ReadInputDay13(input);
+            int sum = 0;
+            foreach (char[,] pattern in patterns)
+            {
+                sum += FindVerticalReflectionScore(pattern);
+                sum += FindHorizontalReflectionScore(pattern);
+            }
+            outputLabel.Content = sum;
+        }
+
+        private static int FindVerticalReflectionScore(char[,] pattern)
+        {
+            List<char[]> columns = pattern.GetColumns();
+            for (int col = 0; col < columns.Count - 1; col++)
+            {
+                bool mirror = true;
+                for (int i = 0; i < Math.Min(col + 1, columns.Count - col - 1); i++)
+                {
+                    char[] leftCol = columns[col - i];
+                    char[] rightCol = columns[col + i + 1];
+                    if (!leftCol.SequenceEqual(rightCol))
+                    {
+                        mirror = false;
+                        break;
+                    }
+                }
+                if (mirror) return col + 1;
+            }
+            return 0;
+        }
+
+        private static int FindHorizontalReflectionScore(char[,] pattern)
+        {
+            List<char[]> rows = pattern.GetRows();
+            for (int row = 0; row < rows.Count - 1; row++)
+            {
+                bool mirror = true;
+                for (int i = 0; i < Math.Min(row + 1, rows.Count - row - 1); i++)
+                {
+                    char[] leftCol = rows[row - i];
+                    char[] rightCol = rows[row + i + 1];
+                    if (!leftCol.SequenceEqual(rightCol))
+                    {
+                        mirror = false;
+                        break;
+                    }
+                }
+                if (mirror) return (row + 1) * 100;
+            }
+            return 0;
+        }
+
+        [Puzzle(day: 13, part: 2)]
+        public static void Day13Part2(string input, Grid display, Label outputLabel)
+        {
+            List<char[,]> patterns = ReadInputDay13(input);
+            int sum = 0;
+            foreach (char[,] pattern in patterns)
+            {
+                sum += FindVerticalReflectionScoreWithSmudge(pattern);
+                sum += FindHorizontalReflectionScoreWithSmudge(pattern);
+            }
+            outputLabel.Content = sum;
+        }
+
+        private static int FindVerticalReflectionScoreWithSmudge(char[,] pattern)
+        {
+            List<char[]> columns = pattern.GetColumns();
+            for (int col = 0; col < columns.Count - 1; col++)
+            {
+                bool mirror = true;
+                bool smudgeFixed = false;
+                for (int i = 0; i < Math.Min(col + 1, columns.Count - col - 1); i++)
+                {
+                    char[] leftCol = columns[col - i];
+                    char[] rightCol = columns[col + i + 1];
+                    if (!leftCol.SequenceEqual(rightCol))
+                    {
+                        if (!smudgeFixed && leftCol.SequenceEqualExceptOne(rightCol))
+                        {
+                            smudgeFixed = true;
+                        }
+                        else
+                        {
+                            mirror = false;
+                            break;
+                        }
+                    }
+                }
+                if (mirror && smudgeFixed) return col + 1;
+            }
+            return 0;
+        }
+
+        private static int FindHorizontalReflectionScoreWithSmudge(char[,] pattern)
+        {
+            List<char[]> rows = pattern.GetRows();
+            for (int row = 0; row < rows.Count - 1; row++)
+            {
+                bool mirror = true;
+                bool smudgeFixed = false;
+                for (int i = 0; i < Math.Min(row + 1, rows.Count - row - 1); i++)
+                {
+                    char[] leftCol = rows[row - i];
+                    char[] rightCol = rows[row + i + 1];
+                    if (!leftCol.SequenceEqual(rightCol))
+                    {
+                        if (!smudgeFixed && leftCol.SequenceEqualExceptOne(rightCol))
+                        {
+                            smudgeFixed = true;
+                        }
+                        else
+                        {
+                            mirror = false;
+                            break;
+                        }
+                    }
+                }
+                if (mirror && smudgeFixed) return (row + 1) * 100;
+            }
+            return 0;
+        }
+        #endregion
     }
 }
