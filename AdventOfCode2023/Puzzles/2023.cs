@@ -1308,5 +1308,190 @@ namespace AdventOfCode2023.Puzzles
             return 0;
         }
         #endregion
+
+        #region Day 14
+        private static char[,] ReadInputDay14(string input)
+        {
+            string[] lines = input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            char[,] grid = new char[lines.Length, lines[0].Length];
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int col = 0; col < line.Length; col++)
+                {
+                    grid[row, col] = line[col];
+                }
+            }
+            return grid;
+        }
+
+
+        [Puzzle(day: 14, part: 1)]
+        public static void Day14Part1(string input, Grid display, Label outputLabel)
+        {
+            char[,] grid = ReadInputDay14(input);
+            RollNorth(grid);
+            TextBlock textBlock = new() { FontFamily = new System.Windows.Media.FontFamily("Cascadia Code") };
+            display.Children.Add(textBlock);
+            for (int row = 0; row < grid.GetLength(0); row++)
+            {
+                for (int col = 0; col < grid.GetLength(1); col++)
+                {
+                    textBlock.Inlines.Add(grid[row, col].ToString());
+                }
+                textBlock.Inlines.Add("\n");
+            }
+
+            outputLabel.Content = CalculateLoad(grid);
+        }
+
+        private static void RollNorth(char[,] grid)
+        {
+            for (int row = 0; row < grid.GetLength(0); row++)
+            {
+                for (int col = 0; col < grid.GetLength(1); col++)
+                {
+                    if (grid[row, col] == 'O')
+                    {
+                        int newRow = row;
+                        while (newRow > 0 && grid[newRow - 1, col] == '.')
+                        {
+                            newRow--;
+                        }
+                        grid[row, col] = '.';
+                        grid[newRow, col] = 'O';
+                    }
+                }
+            }
+        }
+
+        private static void RollWest(char[,] grid)
+        {
+            for (int col = 0; col < grid.GetLength(1); col++)
+            {
+                for (int row = 0; row < grid.GetLength(0); row++)
+                {
+                    if (grid[row, col] == 'O')
+                    {
+                        int newCol = col;
+                        while (newCol > 0 && grid[row, newCol - 1] == '.')
+                        {
+                            newCol--;
+                        }
+                        grid[row, col] = '.';
+                        grid[row, newCol] = 'O';
+                    }
+                }
+            }
+        }
+
+        private static void RollSouth(char[,] grid)
+        {
+            for (int row = grid.GetLength(0) - 1; row >= 0; row--)
+            {
+                for (int col = 0; col < grid.GetLength(1); col++)
+                {
+                    if (grid[row, col] == 'O')
+                    {
+                        int newRow = row;
+                        while (newRow < grid.GetLength(0) - 1 && grid[newRow + 1, col] == '.')
+                        {
+                            newRow++;
+                        }
+                        grid[row, col] = '.';
+                        grid[newRow, col] = 'O';
+                    }
+                }
+            }
+        }
+
+        private static void RollEast(char[,] grid)
+        {
+            for (int col = grid.GetLength(1) - 1; col >= 0; col--)
+            {
+                for (int row = 0; row < grid.GetLength(0); row++)
+                {
+                    if (grid[row, col] == 'O')
+                    {
+                        int newCol = col;
+                        while (newCol < grid.GetLength(1) - 1 && grid[row, newCol + 1] == '.')
+                        {
+                            newCol++;
+                        }
+                        grid[row, col] = '.';
+                        grid[row, newCol] = 'O';
+                    }
+                }
+            }
+        }
+
+        private static int CalculateLoad(char[,] grid)
+        {
+            int load = 0;
+            for (int row = 0; row < grid.GetLength(0); row++)
+            {
+                for (int col = 0; col < grid.GetLength(1); col++)
+                {
+                    if (grid[row, col] == 'O')
+                    {
+                        load += grid.GetLength(0) - row;
+                    }
+                }
+            }
+            return load;
+        }
+
+
+        [Puzzle(day: 14, part: 2)]
+        public static void Day14Part2(string input, Grid display, Label outputLabel)
+        {
+            char[,] grid = ReadInputDay14(input);
+            TextBlock textBlock = new() { FontFamily = new System.Windows.Media.FontFamily("Cascadia Code") };
+            display.Children.Add(textBlock);
+            Dictionary<char[,], int> grids = new() { { grid.Copy(), 0 } };
+            bool checkForCycle = true;
+            for (int i = 0; i < 1000000000; i++)
+            {
+                SpinCycle(grid);
+                if (grids.Keys.Any(g => g.Cast<char>().SequenceEqual(grid.Cast<char>())))
+                {
+                    for (int j = 0; j < grids.Keys.Count; j++)
+                    {
+                        if (checkForCycle && grids.Keys.ElementAt(j).Cast<char>().SequenceEqual(grid.Cast<char>()))
+                        {
+                            int loopIndex = grids[grids.Keys.ElementAt(j)];
+                            // after i+1 spin cycles we are at grid, after loopIndex spin cycles we were at the same
+                            int loopLength = (i + 1) - loopIndex;
+                            while (i + loopLength < 1000000000)
+                            {
+                                i += loopLength;
+                            }
+                            checkForCycle = false;
+                        }
+                    }
+                }
+                if (checkForCycle) grids.Add(grid.Copy(), i + 1);
+            }
+            for (int row = 0; row < grid.GetLength(0); row++)
+            {
+                for (int col = 0; col < grid.GetLength(1); col++)
+                {
+                    textBlock.Inlines.Add(grid[row, col].ToString());
+                }
+                textBlock.Inlines.Add("\n");
+            }
+            outputLabel.Content = CalculateLoad(grid);
+        }
+
+        private static void SpinCycle(char[,] grid)
+        {
+            RollNorth(grid);
+            RollWest(grid);
+            RollSouth(grid);
+            RollEast(grid);
+        }
+
+
+        #endregion
     }
 }

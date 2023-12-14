@@ -71,5 +71,19 @@ namespace AdventOfCode2023.Helpers
             }
             return oneWasDifferent;
         }
+
+        public static T[,] Copy<T>(this T[,] array)
+        {
+            if (array.Rank != 2) throw new ArgumentException(nameof(array));
+            T[,] output = new T[array.GetLength(0), array.GetLength(1)];
+            for (int i0 = 0; i0 < array.GetLength(0); i0++)
+            {
+                for (int i1 = 0; i1 < array.GetLength(1); i1++)
+                {
+                    output[i0, i1] = array[i0, i1];
+                }
+            }
+            return output;
+        }
     }
 }
