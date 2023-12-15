@@ -1493,5 +1493,102 @@ namespace AdventOfCode2023.Puzzles
 
 
         #endregion
+
+        #region Day 15
+        private static string[] ReadInputDay15(string input)
+        {
+            return input.Split(",").Where(x => !string.IsNullOrEmpty(x)).ToArray();
+        }
+
+
+        [Puzzle(day: 15, part: 1)]
+        public static void Day15Part1(string input, Grid display, Label outputLabel)
+        {
+            string[] initializationSequence = ReadInputDay15(input);
+            outputLabel.Content = initializationSequence.Select(s => HASH(s)).Sum();
+        }
+
+        public static int HASH(string str)
+        {
+            int hash = 0;
+            foreach (char c in str)
+            {
+                if (c == '\n') continue;
+                int ascii = (int)c;
+                hash += ascii;
+                hash *= 17;
+                hash %= 256;
+            }
+            return hash;
+        }
+
+
+        [Puzzle(day: 15, part: 2)]
+        public static void Day15Part2(string input, Grid display, Label outputLabel)
+        {
+            string[] initializationSequence = ReadInputDay15(input);
+            List<(string label, int focalLength)>[] boxes = new List<(string label, int focalLength)>[256];
+            for (int i = 0; i <  boxes.Length; i++)
+            {
+                boxes[i] = new();
+            }
+            foreach (string step in initializationSequence)
+            {
+                if (step.Contains('-'))
+                {
+                    string label = step[..^1];
+                    int boxNumber = HASH(label);
+                    var box = boxes[boxNumber];
+                    int lensIndex = box.FindIndex(x => x.label == label);
+                    if (lensIndex >= 0)
+                    {
+                        box.RemoveAt(lensIndex);
+                    }
+                }
+                else if (step.Contains('='))
+                {
+                    string[] split = step.Split('=');
+                    string label = split[0];
+                    int focalLength = int.Parse(split[1]);
+                    int boxNumber = HASH(label);
+                    var box = boxes[boxNumber];
+                    int lensIndex = box.FindIndex(x => x.label == label);
+                    if (lensIndex >= 0)
+                    {
+                        box.RemoveAt(lensIndex);
+                        box.Insert(lensIndex, (label, focalLength));
+                    }
+                    else
+                    {
+                        box.Add((label, focalLength));
+                    }
+                }
+            }
+            outputLabel.Content = CalculateFocusingPower(boxes);
+        }
+
+        private static int CalculateFocusingPower(List<(string label, int focalLength)>[] boxes)
+        {
+            int sum = 0;
+            for (int i = 0; i < boxes.Length; i++)
+            {
+                var box = boxes[i];
+                sum += CalculateFocusingPower(box, i);
+            }
+            return sum;
+        }
+
+        private static int CalculateFocusingPower(List<(string label, int focalLength)> box, int boxNumber)
+        {
+            int sum = 0;
+            for (int i = 0; i < box.Count; i++)
+            {
+                var (_, focalLength) = box[i];
+                int focusingPower = (boxNumber + 1) * (i + 1) * focalLength;
+                sum += focusingPower;
+            }
+            return sum;
+        }
+        #endregion
     }
 }
