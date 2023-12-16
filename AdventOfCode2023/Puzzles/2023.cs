@@ -1590,5 +1590,162 @@ namespace AdventOfCode2023.Puzzles
             return sum;
         }
         #endregion
+
+        #region Day 16
+        private static char[,] ReadInputDay16(string input)
+        {
+            string[] lines = input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            char[,] result = new char[lines.Length, lines[0].Length];
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int col = 0; col < line.Length; col++)
+                {
+                    result[row, col] = line[col];
+                }
+            }
+            return result;
+        }
+
+
+        [Puzzle(day: 16, part: 1)]
+        public static void Day16Part1(string input, Grid display, Label outputLabel)
+        {
+            char[,] grid = ReadInputDay16(input);
+            bool[,] energized = new bool[grid.GetLength(0), grid.GetLength(1)];
+            TrackBeam(0, 0, grid, energized, CardinalDirection.East, new());
+            outputLabel.Content = energized.Cast<bool>().Count(b => b);
+        }
+
+        private static void TrackBeam(int row, int col, char[,] grid, bool[,] energized, CardinalDirection facing, List<(int row, int col, CardinalDirection facing)> visited)
+        {
+            if (row < 0 || col < 0 || row >= grid.GetLength(0) || col >= grid.GetLength(1)) return;
+            if (visited.Contains((row, col, facing))) return;
+            visited.Add((row, col, facing));
+            energized[row, col] = true;
+            switch (grid[row, col])
+            {
+                case '.':
+                    (row, col) = MoveInDirection(facing, row, col);
+                    TrackBeam(row, col, grid, energized, facing, visited);
+                    return;
+                case '/':
+                    switch(facing)
+                    {
+                        case CardinalDirection.North:
+                            facing = CardinalDirection.East;
+                            break;
+                        case CardinalDirection.East:
+                            facing = CardinalDirection.North;
+                            break;
+                        case CardinalDirection.South:
+                            facing = CardinalDirection.West;
+                            break;
+                        case CardinalDirection.West:
+                            facing = CardinalDirection.South;
+                            break;
+                    }
+                    (row, col) = MoveInDirection(facing, row, col);
+                    TrackBeam(row, col, grid, energized, facing, visited);
+                    return;
+                case '\\':
+                    switch (facing)
+                    {
+                        case CardinalDirection.North:
+                            facing = CardinalDirection.West;
+                            break;
+                        case CardinalDirection.East:
+                            facing = CardinalDirection.South;
+                            break;
+                        case CardinalDirection.South:
+                            facing = CardinalDirection.East;
+                            break;
+                        case CardinalDirection.West:
+                            facing = CardinalDirection.North;
+                            break;
+                    }
+                    (row, col) = MoveInDirection(facing, row, col);
+                    TrackBeam(row, col, grid, energized, facing, visited);
+                    return;
+                case '-':
+                    switch(facing)
+                    {
+                        case CardinalDirection.East:
+                        case CardinalDirection.West:
+                            (row, col) = MoveInDirection(facing, row, col);
+                            TrackBeam(row, col, grid, energized, facing, visited);
+                            return;
+                        case CardinalDirection.North:
+                        case CardinalDirection.South:
+                            (int newRow, int newCol) = MoveInDirection(CardinalDirection.West, row, col);
+                            TrackBeam(newRow, newCol, grid, energized, CardinalDirection.West, visited);
+                            (newRow, newCol) = MoveInDirection(CardinalDirection.East, row, col);
+                            TrackBeam(newRow, newCol, grid, energized, CardinalDirection.East, visited);
+                            return;
+                    }
+                    return;
+                case '|':
+                    switch (facing)
+                    {
+                        case CardinalDirection.North:
+                        case CardinalDirection.South:
+                            (row, col) = MoveInDirection(facing, row, col);
+                            TrackBeam(row, col, grid, energized, facing, visited);
+                            return;
+                        case CardinalDirection.East:
+                        case CardinalDirection.West:
+                            (int newRow, int newCol) = MoveInDirection(CardinalDirection.North, row, col);
+                            TrackBeam(newRow, newCol, grid, energized, CardinalDirection.North, visited);
+                            (newRow, newCol) = MoveInDirection(CardinalDirection.South, row, col);
+                            TrackBeam(newRow, newCol, grid, energized, CardinalDirection.South, visited);
+                            return;
+                    }
+                    return;
+            }
+        }
+
+        private static (int row, int col) MoveInDirection(CardinalDirection facing, int row, int col)
+        {
+            return facing switch
+            {
+                CardinalDirection.North => (row - 1, col),
+                CardinalDirection.East => (row, col + 1),
+                CardinalDirection.South => (row + 1, col),
+                CardinalDirection.West => (row, col - 1),
+                _ => throw new NotImplementedException()
+            };
+        }
+
+
+        [Puzzle(day: 16, part: 2)]
+        public static void Day16Part2(string input, Grid display, Label outputLabel)
+        {
+            char[,] grid = ReadInputDay16(input);
+            int maxEnergized = 0;
+            for (int row = 0; row < grid.GetLength(0); row++)
+            {
+                bool[,] energized = new bool[grid.GetLength(0), grid.GetLength(1)];
+                TrackBeam(row, 0, grid, energized, CardinalDirection.East, new());
+                int tilesEnergized = energized.Cast<bool>().Count(b => b);
+                if (tilesEnergized > maxEnergized) maxEnergized = tilesEnergized;
+                energized = new bool[grid.GetLength(0), grid.GetLength(1)];
+                TrackBeam(row, grid.GetLength(1) - 1, grid, energized, CardinalDirection.West, new());
+                tilesEnergized = energized.Cast<bool>().Count(b => b);
+                if (tilesEnergized > maxEnergized) maxEnergized = tilesEnergized;
+            }
+            for (int col = 0; col < grid.GetLength(1); col++)
+            {
+                bool[,] energized = new bool[grid.GetLength(0), grid.GetLength(1)];
+                TrackBeam(0, col, grid, energized, CardinalDirection.South, new());
+                int tilesEnergized = energized.Cast<bool>().Count(b => b);
+                if (tilesEnergized > maxEnergized) maxEnergized = tilesEnergized;
+                energized = new bool[grid.GetLength(0), grid.GetLength(1)];
+                TrackBeam(grid.GetLength(0) - 1, col, grid, energized, CardinalDirection.North, new());
+                tilesEnergized = energized.Cast<bool>().Count(b => b);
+                if (tilesEnergized > maxEnergized) maxEnergized = tilesEnergized;
+            }
+            outputLabel.Content = maxEnergized;
+        }
+        #endregion
     }
 }
