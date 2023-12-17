@@ -1528,7 +1528,7 @@ namespace AdventOfCode2023.Puzzles
         {
             string[] initializationSequence = ReadInputDay15(input);
             List<(string label, int focalLength)>[] boxes = new List<(string label, int focalLength)>[256];
-            for (int i = 0; i <  boxes.Length; i++)
+            for (int i = 0; i < boxes.Length; i++)
             {
                 boxes[i] = new();
             }
@@ -1630,7 +1630,7 @@ namespace AdventOfCode2023.Puzzles
                     TrackBeam(row, col, grid, energized, facing, visited);
                     return;
                 case '/':
-                    switch(facing)
+                    switch (facing)
                     {
                         case CardinalDirection.North:
                             facing = CardinalDirection.East;
@@ -1668,7 +1668,7 @@ namespace AdventOfCode2023.Puzzles
                     TrackBeam(row, col, grid, energized, facing, visited);
                     return;
                 case '-':
-                    switch(facing)
+                    switch (facing)
                     {
                         case CardinalDirection.East:
                         case CardinalDirection.West:
@@ -1745,6 +1745,301 @@ namespace AdventOfCode2023.Puzzles
                 if (tilesEnergized > maxEnergized) maxEnergized = tilesEnergized;
             }
             outputLabel.Content = maxEnergized;
+        }
+        #endregion
+
+        #region Day 17
+        private static int[,] ReadInputDay17(string input)
+        {
+            string[] lines = input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).ToArray();
+            int[,] result = new int[lines.Length, lines[0].Length];
+            for (int row = 0; row < lines.Length; row++)
+            {
+                string line = lines[row];
+                for (int col = 0; col < line.Length; col++)
+                {
+                    result[row, col] = int.Parse(line[col] + "");
+                }
+            }
+            return result;
+        }
+
+
+        [Puzzle(day: 17, part: 1)]
+        public static void Day17Part1(string input, Grid display, Label outputLabel)
+        {
+            int[,] heatMap = ReadInputDay17(input);
+            long progressValue = 0;
+            long maximumProgress = (long)heatMap.GetLength(0) * heatMap.GetLength(1) * 12;
+            ProgressBar progress = new() { Minimum = 0, Maximum = maximumProgress, MaxWidth = 200, MaxHeight = 40 };
+            display.Children.Add(progress);
+            var dispatcherTimer = new DispatcherTimer(DispatcherPriority.Normal, progress.Dispatcher);
+            dispatcherTimer.Tick += (sender, e) =>
+            {
+                progress.Value = progressValue;
+            };
+            dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
+            dispatcherTimer.Start();
+            Task.Run(() =>
+            {
+                int result = HeatDijkstra(heatMap, (0, 0), (heatMap.GetLength(0) - 1, heatMap.GetLength(1) - 1), ref progressValue);
+                progressValue = maximumProgress;
+                outputLabel.Dispatcher.Invoke(() => outputLabel.Content = result);
+            });
+        }
+
+        private static int HeatDijkstra(int[,] heatMap, (int row, int col) startNode, (int row, int col) goalNode, ref long progressValue)
+        {
+            var previous = new Dictionary<(int row, int col, int direction, int steps), (int row, int col, int direction, int steps)>();
+            Dictionary<(int row, int col, int direction, int steps), int> distance = new();
+            var Q = new PriorityQueue<(int row, int col, int direction, int steps), int>();
+            HashSet<(int row, int col, int direction, int steps)> solved = new();
+            for (int row = 0; row < heatMap.GetLength(0); row++)
+            {
+                for (int col = 0; col < heatMap.GetLength(1); col++)
+                {
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        for (int steps = 1; steps <= 3; steps++)
+                        {
+                            Q.Enqueue((row, col, direction, steps), int.MaxValue);
+                            distance[(row, col, direction, steps)] = int.MaxValue;
+                        }
+                    }
+                }
+            }
+            Q.Enqueue((startNode.row, startNode.col, 1, 0), 0);
+            distance[(startNode.row, startNode.col, 1, 0)] = 0;
+            while (Q.TryDequeue(out var currentNode, out int currentDistance))
+            {
+                if (solved.Contains(currentNode)) continue;
+                solved.Add(currentNode);
+                Interlocked.Increment(ref progressValue);
+                if (currentNode.row == goalNode.row && currentNode.col == goalNode.col) return currentDistance;
+                if (currentNode.steps < 3)
+                {
+                    var forward = StepForward(currentNode);
+                    if (!solved.Contains(forward) && forward.row >= 0 && forward.row < heatMap.GetLength(0) && forward.col >= 0 && forward.col < heatMap.GetLength(1))
+                    {
+                        UpdateDistance(heatMap, distance, previous, currentNode, forward, Q);
+                    }
+                }
+                var left = TurnLeft(currentNode);
+                if (!solved.Contains(left) && left.row >= 0 && left.row < heatMap.GetLength(0) && left.col >= 0 && left.col < heatMap.GetLength(1))
+                {
+                    UpdateDistance(heatMap, distance, previous, currentNode, left, Q);
+                }
+                var right = TurnRight(currentNode);
+                if (!solved.Contains(right) && right.row >= 0 && right.row < heatMap.GetLength(0) && right.col >= 0 && right.col < heatMap.GetLength(1))
+                {
+                    UpdateDistance(heatMap, distance, previous, currentNode, right, Q);
+                }
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        private static (int row, int col, int direction, int steps) StepForward((int row, int col, int direction, int steps) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row - 1, currentNode.col, currentNode.direction, currentNode.steps + 1),
+                1 => (currentNode.row, currentNode.col + 1, currentNode.direction, currentNode.steps + 1),
+                2 => (currentNode.row + 1, currentNode.col, currentNode.direction, currentNode.steps + 1),
+                3 => (currentNode.row, currentNode.col - 1, currentNode.direction, currentNode.steps + 1),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static (int row, int col, int direction, int steps) TurnRight((int row, int col, int direction, int steps) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row, currentNode.col + 1, 1, 1),
+                1 => (currentNode.row + 1, currentNode.col, 2, 1),
+                2 => (currentNode.row, currentNode.col - 1, 3, 1),
+                3 => (currentNode.row - 1, currentNode.col, 0, 1),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static (int row, int col, int direction, int steps) TurnLeft((int row, int col, int direction, int steps) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row, currentNode.col - 1, 3, 1),
+                1 => (currentNode.row - 1, currentNode.col, 0, 1),
+                2 => (currentNode.row, currentNode.col + 1, 1, 1),
+                3 => (currentNode.row + 1, currentNode.col, 2, 1),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static void UpdateDistance(int[,] heatMap, Dictionary<(int row, int col, int direction, int steps), int> distance, Dictionary<(int row, int col, int direction, int steps), (int row, int col, int direction, int steps)> previous, (int row, int col, int direction, int steps) currentNode, (int row, int col, int direction, int steps) forward, PriorityQueue<(int row, int col, int direction, int steps), int> Q)
+        {
+            int newDistance = distance[currentNode] + heatMap[forward.row, forward.col];
+
+            if (newDistance < distance[forward])
+            {
+                distance[forward] = newDistance;
+                previous[forward] = currentNode;
+                Q.Enqueue(forward, newDistance);
+            }
+        }
+
+
+        [Puzzle(day: 17, part: 2)]
+        public static void Day17Part2(string input, Grid display, Label outputLabel)
+        {
+            int[,] heatMap = ReadInputDay17(input);
+            long progressValue = 0;
+            long maximumProgress = (long)heatMap.GetLength(0) * heatMap.GetLength(1) * 12;
+            ProgressBar progress = new() { Minimum = 0, Maximum = maximumProgress, MaxWidth = 200, MaxHeight = 40 };
+            display.Children.Add(progress);
+            var dispatcherTimer = new DispatcherTimer(DispatcherPriority.Normal, progress.Dispatcher);
+            dispatcherTimer.Tick += (sender, e) =>
+            {
+                progress.Value = progressValue;
+            };
+            dispatcherTimer.Interval = TimeSpan.FromMilliseconds(10);
+            dispatcherTimer.Start();
+            Task.Run(() =>
+            {
+                int result = UltraHeatDijkstra(heatMap, (0, 0), (heatMap.GetLength(0) - 1, heatMap.GetLength(1) - 1), ref progressValue);
+                progressValue = maximumProgress;
+                outputLabel.Dispatcher.Invoke(() => outputLabel.Content = result);
+            });
+        }
+
+        private static int UltraHeatDijkstra(int[,] heatMap, (int row, int col) startNode, (int row, int col) goalNode, ref long progressValue)
+        {
+            var previous = new Dictionary<(int row, int col, int direction), (int row, int col, int direction)>();
+            Dictionary<(int row, int col, int direction), int> distance = new();
+            var Q = new PriorityQueue<(int row, int col, int direction), int>();
+            HashSet<(int row, int col, int direction)> solved = new();
+            for (int row = 0; row < heatMap.GetLength(0); row++)
+            {
+                for (int col = 0; col < heatMap.GetLength(1); col++)
+                {
+                    for (int direction = 0; direction < 4; direction++)
+                    {
+                        Q.Enqueue((row, col, direction), int.MaxValue);
+                        distance[(row, col, direction)] = int.MaxValue;
+                    }
+                }
+            }
+            Q.Enqueue((startNode.row, startNode.col, 1), 0);
+            distance[(startNode.row, startNode.col, 1)] = 0;
+            while (Q.TryDequeue(out var currentNode, out int currentDistance))
+            {
+                if (solved.Contains(currentNode)) continue;
+                solved.Add(currentNode);
+                Interlocked.Increment(ref progressValue);
+                if (currentNode.row == goalNode.row && currentNode.col == goalNode.col) return currentDistance;
+                var left = (currentNode != (0, 0, 1)) ? TurnLeftAndMove3(currentNode) : Move3(currentNode);
+                for (int i = 0; i < 7; i++)
+                {
+                    left = StepForward(left);
+                    if (!solved.Contains(left) && left.row >= 0 && left.row < heatMap.GetLength(0) && left.col >= 0 && left.col < heatMap.GetLength(1))
+                    {
+                        UpdateDistance(heatMap, distance, previous, currentNode, left, Q);
+                    }
+                }
+                var right = TurnRightAndMove3(currentNode);
+                for (int i = 0; i < 7; i++)
+                {
+                    right = StepForward(right);
+                    if (!solved.Contains(right) && right.row >= 0 && right.row < heatMap.GetLength(0) && right.col >= 0 && right.col < heatMap.GetLength(1))
+                    {
+                        UpdateDistance(heatMap, distance, previous, currentNode, right, Q);
+                    }
+                }
+            }
+            throw new IndexOutOfRangeException();
+        }
+
+        private static (int row, int col, int direction) TurnLeftAndMove3((int row, int col, int direction) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row, currentNode.col - 3, 3),
+                1 => (currentNode.row - 3, currentNode.col, 0),
+                2 => (currentNode.row, currentNode.col + 3, 1),
+                3 => (currentNode.row + 3, currentNode.col, 2),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static (int row, int col, int direction) Move3((int row, int col, int direction) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                1 => (currentNode.row, currentNode.col + 3, 1),
+                _ => throw new NotImplementedException()
+            };
+        }
+
+        private static (int row, int col, int direction) TurnRightAndMove3((int row, int col, int direction) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row, currentNode.col + 3, 1),
+                1 => (currentNode.row + 3, currentNode.col, 2),
+                2 => (currentNode.row, currentNode.col - 3, 3),
+                3 => (currentNode.row - 3, currentNode.col, 0),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static (int row, int col, int direction) StepForward((int row, int col, int direction) currentNode)
+        {
+            return currentNode.direction switch
+            {
+                0 => (currentNode.row - 1, currentNode.col, currentNode.direction),
+                1 => (currentNode.row, currentNode.col + 1, currentNode.direction),
+                2 => (currentNode.row + 1, currentNode.col, currentNode.direction),
+                3 => (currentNode.row, currentNode.col - 1, currentNode.direction),
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        private static void UpdateDistance(int[,] heatMap, Dictionary<(int row, int col, int direction), int> distance, Dictionary<(int row, int col, int direction), (int row, int col, int direction)> previous, (int row, int col, int direction) currentNode, (int row, int col, int direction) next, PriorityQueue<(int row, int col, int direction), int> Q)
+        {
+            int newDistance = distance[currentNode] + heatMap[next.row, next.col];
+            if (currentNode.row < next.row)
+            {
+                for (int row = currentNode.row + 1; row < next.row; row++)
+                {
+                    newDistance += heatMap[row, next.col];
+                }
+            }
+            if (currentNode.row > next.row)
+            {
+                for (int row = currentNode.row - 1; row > next.row; row--)
+                {
+                    newDistance += heatMap[row, next.col];
+                }
+            }
+            if (currentNode.col < next.col)
+            {
+                for (int col = currentNode.col + 1; col < next.col; col++)
+                {
+                    newDistance += heatMap[next.row, col];
+                }
+            }
+            if (currentNode.col > next.col)
+            {
+                for (int col = currentNode.col - 1; col > next.col; col--)
+                {
+                    newDistance += heatMap[next.row, col];
+                }
+            }
+
+            if (newDistance < distance[next])
+            {
+                distance[next] = newDistance;
+                previous[next] = currentNode;
+                Q.Enqueue(next, newDistance);
+            }
         }
         #endregion
     }
