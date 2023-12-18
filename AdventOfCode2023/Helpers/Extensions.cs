@@ -85,5 +85,15 @@ namespace AdventOfCode2023.Helpers
             }
             return output;
         }
+
+        public static HashSet<T> Copy<T>(this HashSet<T> set)
+        {
+            HashSet<T> copy = new HashSet<T>();
+            foreach (T t in set)
+            {
+                copy.Add(t);
+            }
+            return copy;
+        }
     }
 }

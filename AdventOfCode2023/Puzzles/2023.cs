@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading;
@@ -2040,6 +2041,197 @@ namespace AdventOfCode2023.Puzzles
                 previous[next] = currentNode;
                 Q.Enqueue(next, newDistance);
             }
+        }
+        #endregion
+
+        #region Day 18
+        private static (char direction, int distance, string color)[] ReadInputDay18(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(line =>
+            {
+                string[] split = line.Split(' ');
+                char direction = split[0][0];
+                int distance = int.Parse(split[1]);
+                string color = split[2][1..^1];
+                return (direction, distance, color);
+            }).ToArray();
+        }
+
+
+        [Puzzle(day: 18, part: 1)]
+        public static void Day18Part1(string input, Grid display, Label outputLabel)
+        {
+            var digPlan = ReadInputDay18(input);
+            int row = 0;
+            int col = 0;
+            HashSet<(int row, int col)> hole = new() { (0, 0) };
+            Dictionary<(int row, int col), string> colors = new();
+            foreach (var (direction, distance, color) in digPlan)
+            {
+                int dr;
+                int dc;
+                switch (direction)
+                {
+                    case 'U':
+                        dr = -1;
+                        dc = 0;
+                        break;
+                    case 'R':
+                        dr = 0;
+                        dc = 1;
+                        break;
+                    case 'D':
+                        dr = 1;
+                        dc = 0;
+                        break;
+                    case 'L':
+                        dr = 0;
+                        dc = -1;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+                for (int i = 0; i < distance; i++)
+                {
+                    row += dr;
+                    col += dc;
+                    hole.Add((row, col));
+                    colors.Add((row, col), color);
+                }
+            }
+            TextBlock textBlock = new() { FontFamily = new System.Windows.Media.FontFamily("Cascadia Code") };
+            display.Children.Add(textBlock);
+            int minRow = hole.Min(x => x.row);
+            int minCol = hole.Min(x => x.col);
+            int maxRow = hole.Max(x => x.row);
+            int maxCol = hole.Max(x => x.col);
+            HashSet<(int row, int col)> holeEdge = hole.Copy();
+            for (int row1 = minRow; row1 <= maxRow; row1++)
+            {
+                bool inside = false;
+                for (int col1 = minCol; col1 <= maxCol; col1++)
+                {
+                    if (hole.Contains((row1, col1)))
+                    {
+                        inside = !inside;
+                        string color = colors.ContainsKey((row1, col1)) ? colors[(row1, col1)] : "#000000";
+                        bool above = holeEdge.Contains((row1 - 1, col1));
+                        bool below = holeEdge.Contains((row1 + 1, col1));
+                        int length = 0;
+                        do
+                        {
+                            textBlock.Inlines.Add(new Run("#") { Foreground = (System.Windows.Media.Brush)new BrushConverter().ConvertFrom(color)! });
+                            col1++;
+                            length++;
+                        } while (hole.Contains((row1, col1)));
+                        if ((length > 1 && above && holeEdge.Contains((row1 - 1, col1 - 1))) ||
+                            (length > 1 && below && holeEdge.Contains((row1 + 1, col1 - 1)))) inside = !inside;
+                        if (col1 > maxCol || !hole.Any(x => x.row == row1 && x.col > col1)) break;
+                    }
+                    if (inside) hole.Add((row1, col1));
+                    else textBlock.Inlines.Add(" ");
+                }
+                textBlock.Inlines.Add("\n");
+            }
+            outputLabel.Content = hole.Count;
+        }
+
+        private static (char direction, int distance, string color)[] ReadInputDay18Part2(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(line =>
+            {
+                string[] split = line.Split(' ');
+                string color = split[2][1..^1];
+                return (DigitToDirection(color[^1..]), Convert.ToInt32(color[1..^1], 16), "#ff0000");
+            }).ToArray();
+        }
+
+        private static char DigitToDirection(string v)
+        {
+            return v switch
+            {
+                "0" => 'R',
+                "1" => 'D',
+                "2" => 'L',
+                "3" => 'U',
+                _ => throw new IndexOutOfRangeException()
+            };
+        }
+
+        [Puzzle(day: 18, part: 2)]
+        public static void Day18Part2(string input, Grid display, Label outputLabel)
+        {
+            var digPlan = ReadInputDay18Part2(input);
+            long row = 0;
+            long col = 0;
+            HashSet<(long row, long col0, long col1)> horizontalEdges = new();
+            HashSet<(long row0, long row1, long col)> verticalEdges = new();
+            foreach (var (direction, distance, color) in digPlan)
+            {
+                switch (direction)
+                {
+                    case 'U':
+                        verticalEdges.Add((row - distance, row, col));
+                        row -= distance;
+                        break;
+                    case 'R':
+                        horizontalEdges.Add((row, col, col + distance));
+                        col += distance;
+                        break;
+                    case 'D':
+                        verticalEdges.Add((row, row + distance, col));
+                        row += distance;
+                        break;
+                    case 'L':
+                        horizontalEdges.Add((row, col - distance, col));
+                        col -= distance;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+            long minRow = horizontalEdges.Min(x => x.row);
+            long minCol = verticalEdges.Min(x => x.col);
+            long maxRow = horizontalEdges.Max(x => x.row);
+            long maxCol = verticalEdges.Max(x => x.col);
+            BigInteger holeSize = 0;
+            BigInteger lastRowSize = 0;
+            long lastRow = minRow;
+            var x = verticalEdges.Where(edge => edge.row0 == 110 || edge.row1 == 109);
+            foreach (long row1 in verticalEdges.SelectMany(edge => new long[] {edge.row0, edge.row0 + 1, edge.row1, edge.row1 + 1}).Distinct().OrderBy(l => l))
+            {
+                holeSize += lastRowSize * (row1 - lastRow);
+                lastRow = row1;
+                lastRowSize = CalculateRowSize(row1, verticalEdges, horizontalEdges, minCol, maxCol);
+            }
+            holeSize += lastRowSize * (maxRow - lastRow);
+
+            outputLabel.Content = holeSize;
+        }
+
+        private static BigInteger CalculateRowSize(long row, HashSet<(long row0, long row1, long col)> verticalEdges, HashSet<(long row, long col0, long col1)> horizontalEdges, long minCol, long maxCol)
+        {
+            BigInteger rowSize = 0;
+            bool inside = false;
+            long lastCol = minCol;
+            foreach (long col in verticalEdges.Where(edge => edge.row0 <= row && edge.row1 >= row).Select(edge => edge.col).Distinct().OrderBy(l => l))
+            {
+                if (horizontalEdges.Contains((row, lastCol, col)))
+                {
+                    rowSize += col - lastCol;
+                    if (verticalEdges.Any(edge => edge.col == lastCol && edge.row0 == row) && verticalEdges.Any(edge => edge.col == col && edge.row0 == row)) inside = !inside;
+                    else if (verticalEdges.Any(edge => edge.col == lastCol && edge.row1 == row) && verticalEdges.Any(edge => edge.col == col && edge.row1 == row)) inside = !inside;
+                }
+                else
+                {
+                    if (inside) rowSize += col - lastCol;
+                    else rowSize++;
+                    inside = !inside;
+                }
+                lastCol = col;
+            }
+            if (inside) throw new NotImplementedException();
+            return rowSize;
         }
         #endregion
     }
