@@ -2234,5 +2234,135 @@ namespace AdventOfCode2023.Puzzles
             return rowSize;
         }
         #endregion
+
+        #region Day 19
+        private static (Dictionary<string, MachinePartWorkflow> workflows, MachinePart[] parts) ReadInputDay19(string input)
+        {
+            string[] split = input.Split("\n\n");
+            Dictionary<string, MachinePartWorkflow> workflows = split[0].Split('\n').Select(l => new MachinePartWorkflow(l)).ToDictionary(w => w.Name);
+            MachinePart[] parts = split[1].Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => new MachinePart(l)).ToArray();
+            return (workflows, parts);
+        }
+
+
+        [Puzzle(day: 19, part: 1)]
+        public static void Day19Part1(string input, Grid display, Label outputLabel)
+        {
+            var (workflows, parts) = ReadInputDay19(input);
+            List<MachinePart> accepted = new();
+            foreach (var part in parts)
+            {
+                bool accept = SendToWorkflow("in", part, workflows);
+                if (accept) accepted.Add(part);
+            }
+            outputLabel.Content = accepted.Select(part => part.Properties.Sum(x => x.Value)).Sum();
+        }
+
+        private static bool SendToWorkflow(string workflowName, MachinePart part, Dictionary<string, MachinePartWorkflow> workflows)
+        {
+            if (workflowName == "A") return true;
+            if (workflowName == "R") return false;
+            MachinePartWorkflow workflow = workflows[workflowName];
+            foreach (var rule in workflow.Rules)
+            {
+                if (rule.Operation.HasValue && rule.Property.HasValue && rule.Compare.HasValue)
+                {
+                    switch (rule.Operation.Value)
+                    {
+                        case MachinePartWorkflow.Operation.lt:
+                            if (part.Properties[rule.Property.Value] < rule.Compare.Value) return SendToWorkflow(rule.TargetWorkflow, part, workflows);
+                            break;
+                        case MachinePartWorkflow.Operation.gt:
+                            if (part.Properties[rule.Property.Value] > rule.Compare.Value) return SendToWorkflow(rule.TargetWorkflow, part, workflows);
+                            break;
+                    }
+                }
+                else
+                {
+                    return SendToWorkflow(rule.TargetWorkflow, part, workflows);
+                }
+            }
+            throw new NotImplementedException();
+        }
+
+
+        [Puzzle(day: 19, part: 2)]
+        public static void Day19Part2(string input, Grid display, Label outputLabel)
+        {
+            var (workflows, _) = ReadInputDay19(input);
+            long accepted = WorkThroughWorkflows("in", conditions: Array.Empty<(MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare)>(), workflows);
+            outputLabel.Content = accepted;
+        }
+
+        private static long WorkThroughWorkflows(string workflowName, (MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare)[] conditions, Dictionary<string, MachinePartWorkflow> workflows)
+        {
+            if (workflowName == "R") return 0;
+            if (workflowName == "A") return CalculatePossibilities(conditions);
+            MachinePartWorkflow workflow = workflows[workflowName];
+            long sum = 0;
+            List<(MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare)> negatedConditions = new();
+            foreach (var rule in workflow.Rules)
+            {
+                if (rule.Operation.HasValue && rule.Property.HasValue && rule.Compare.HasValue)
+                {
+                    var condition = (rule.Property.Value, rule.Operation.Value, rule.Compare.Value);
+                    sum += WorkThroughWorkflows(rule.TargetWorkflow, conditions.Concat(negatedConditions).Append(condition).ToArray(), workflows);
+                    negatedConditions.Add(NegateCondition(condition));
+                }
+                else
+                {
+                    sum += WorkThroughWorkflows(rule.TargetWorkflow, conditions.Concat(negatedConditions).ToArray(), workflows);
+                }
+            }
+            return sum;
+        }
+
+        private static (MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare) NegateCondition((MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare) condition)
+        {
+            return condition.operation switch
+            {
+                MachinePartWorkflow.Operation.lt => (condition.property, MachinePartWorkflow.Operation.gt, condition.compare - 1),
+                MachinePartWorkflow.Operation.gt => (condition.property, MachinePartWorkflow.Operation.lt, condition.compare + 1),
+                _ => throw new NotImplementedException(),
+            };
+        }
+
+        private static long CalculatePossibilities((MachinePart.Property property, MachinePartWorkflow.Operation operation, int compare)[] conditions)
+        {
+            Dictionary<MachinePart.Property, int> ltet = new()
+            {
+                { MachinePart.Property.x, 4000 },
+                { MachinePart.Property.m, 4000 },
+                { MachinePart.Property.a, 4000 },
+                { MachinePart.Property.s, 4000 }
+            };
+            Dictionary<MachinePart.Property, int> gtet = new()
+            {
+                { MachinePart.Property.x, 1 },
+                { MachinePart.Property.m, 1 },
+                { MachinePart.Property.a, 1 },
+                { MachinePart.Property.s, 1 }
+            };
+            foreach (var (property, operation, compare) in conditions)
+            {
+                switch (operation)
+                {
+                    case MachinePartWorkflow.Operation.lt:
+                        if (ltet[property] > compare - 1) ltet[property] = compare - 1;
+                        break;
+                    case MachinePartWorkflow.Operation.gt:
+                        if (gtet[property] < compare + 1) gtet[property] = compare + 1;
+                        break;
+                    default:
+                        throw new NotImplementedException();
+                }
+            }
+            long xRange = Math.Max(0, ltet[MachinePart.Property.x] - gtet[MachinePart.Property.x] + 1);
+            long mRange = Math.Max(0, ltet[MachinePart.Property.m] - gtet[MachinePart.Property.m] + 1);
+            long aRange = Math.Max(0, ltet[MachinePart.Property.a] - gtet[MachinePart.Property.a] + 1);
+            long sRange = Math.Max(0, ltet[MachinePart.Property.s] - gtet[MachinePart.Property.s] + 1);
+            return xRange * mRange * aRange * sRange;
+        }
+        #endregion
     }
 }
