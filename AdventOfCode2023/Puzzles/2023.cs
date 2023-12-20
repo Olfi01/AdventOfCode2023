@@ -2364,5 +2364,115 @@ namespace AdventOfCode2023.Puzzles
             return xRange * mRange * aRange * sRange;
         }
         #endregion
+
+        #region Day 20
+        private static Dictionary<string, MachineModule> ReadInputDay20(string input)
+        {
+            return input.Split("\n").Where(x => !string.IsNullOrEmpty(x)).Select(l => MachineModule.From(l)).ToDictionary(m => m.Name);
+        }
+
+
+        [Puzzle(day: 20, part: 1)]
+        public static void Day20Part1(string input, Grid display, Label outputLabel)
+        {
+            Dictionary<string, MachineModule> modules = ReadInputDay20(input);
+            foreach (var module in modules.Values)
+            {
+                if (module is not ConjunctionModule conjunctionModule) continue;
+                foreach (var sourceModule in modules.Values.Where(m => m.DestinationModules.Contains(conjunctionModule.Name)))
+                {
+                    conjunctionModule.StoredPulses.Add(sourceModule.Name, MachineModule.Pulse.Low);
+                }
+            }
+            Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses = new();
+            long lowCount = 0;
+            long highCount = 0;
+            for (int i = 0; i < 1000; i++)
+            {
+                QueuePulse(MachineModule.Pulse.Low, "broadcaster", "button", pulses, ref lowCount, ref highCount);
+                ProcessAllPulses(modules, pulses, ref lowCount, ref highCount);
+            }
+            outputLabel.Content = lowCount * highCount;
+        }
+
+        private static void ProcessAllPulses(Dictionary<string, MachineModule> modules, Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses, ref long lowCount, ref long highCount)
+        {
+            while (pulses.Count > 0)
+            {
+                var pulse = pulses.Dequeue();
+                if (!modules.ContainsKey(pulse.destination)) continue;
+                var destinationModule = modules[pulse.destination];
+                var outputPulse = destinationModule.ProcessPulse(pulse.pulse, pulse.origin);
+                if (outputPulse.HasValue)
+                {
+                    foreach (string destination in destinationModule.DestinationModules)
+                    {
+                        QueuePulse(outputPulse.Value, destination, destinationModule.Name, pulses, ref lowCount, ref highCount);
+                    }
+                }
+            }
+        }
+
+        private static void QueuePulse(MachineModule.Pulse pulse, string destination, string origin, Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses, ref long lowCount, ref long highCount)
+        {
+            if (pulse == MachineModule.Pulse.Low) lowCount++;
+            else if (pulse == MachineModule.Pulse.High) highCount++;
+            pulses.Enqueue((pulse, destination, origin));
+        }
+
+
+        [Puzzle(day: 20, part: 2)]
+        public static void Day20Part2(string input, Grid display, Label outputLabel)
+        {
+            Dictionary<string, MachineModule> modules = ReadInputDay20(input);
+            foreach (var module in modules.Values)
+            {
+                if (module is not ConjunctionModule conjunctionModule) continue;
+                foreach (var sourceModule in modules.Values.Where(m => m.DestinationModules.Contains(conjunctionModule.Name)))
+                {
+                    conjunctionModule.StoredPulses.Add(sourceModule.Name, MachineModule.Pulse.Low);
+                }
+            }
+            Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses = new();
+            Dictionary<string, long> previousLoops = new();
+            string finalConj = modules.Values.Where(m => m.DestinationModules.Contains("rx")).First().Name;
+            foreach (var module in modules.Values.Where(m => m.DestinationModules.Contains(finalConj)))
+            {
+                previousLoops.Add(module.Name, -1);
+            }
+            long buttonPresses = 0;
+            while (previousLoops.Values.Any(v => v < 0))
+            {
+                QueuePulse(MachineModule.Pulse.Low, "broadcaster", "button", pulses, previousLoops, buttonPresses);
+                buttonPresses++;
+                ProcessAllPulses(modules, pulses, previousLoops, buttonPresses);
+            }
+            outputLabel.Content = Lcm(previousLoops.Values.ToArray());
+        }
+
+        private static void ProcessAllPulses(Dictionary<string, MachineModule> modules, Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses, Dictionary<string, long> previousLoops, long buttonPresses)
+        {
+            while (pulses.Count > 0)
+            {
+                var pulse = pulses.Dequeue();
+                if (!modules.ContainsKey(pulse.destination)) continue;
+                var destinationModule = modules[pulse.destination];
+                var outputPulse = destinationModule.ProcessPulse(pulse.pulse, pulse.origin);
+                if (outputPulse.HasValue)
+                {
+                    foreach (string destination in destinationModule.DestinationModules)
+                    {
+                        QueuePulse(outputPulse.Value, destination, destinationModule.Name, pulses, previousLoops, buttonPresses);
+                    }
+                }
+            }
+        }
+
+        private static void QueuePulse(MachineModule.Pulse pulse, string destination, string origin, Queue<(MachineModule.Pulse pulse, string destination, string origin)> pulses, Dictionary<string, long> previousLoops, long buttonPresses)
+        {
+            if (pulse == MachineModule.Pulse.High && previousLoops.ContainsKey(origin) && previousLoops[origin] < 0) previousLoops[origin] = buttonPresses;
+            pulses.Enqueue((pulse, destination, origin));
+        }
+        #endregion
     }
 }
